@@ -11,6 +11,54 @@ import (
 	"time"
 )
 
+func main() {
+	htmlFile := "lisa-growth-spell.html"
+	_, ferr := os.Stat(htmlFile)
+	if ferr != nil {
+		if os.IsNotExist(ferr) {
+			fmt.Printf("<!> File does not exist: %s\n", htmlFile)
+		} else {
+			fmt.Printf("<!> Failed to open html file: %s\n", htmlFile)
+		}
+		os.Exit(1)
+	}
+	outputDir, _ := strings.CutSuffix(htmlFile, ".html")
+	_, derr := os.Stat(outputDir)
+	if os.IsNotExist(derr) {
+		err := createOutputDir(outputDir)
+		if err != nil {
+			fmt.Println("<!> Failed to make output directory")
+			os.Exit(1)
+		}
+	} else {
+		fmt.Printf("<#> Directory already exist: %s\n", htmlFile)
+	}
+
+	htmlLines, err := readFileLines(htmlFile)
+	if err != nil {
+		fmt.Println("<!> Failed to read lines")
+		os.Exit(1)
+	}
+
+	imgURLs, err := getImageSources(htmlLines, "href=\"")
+	if err != nil {
+		fmt.Println("<!> Failed to get image sources")
+		os.Exit(1)
+	}
+
+	for i := 1; i < len(imgURLs); i++ {
+		err := downloadImage(imgURLs[i], fmt.Sprintf("%s/%d.png", htmlFile, i))
+		if err != nil {
+			fmt.Printf("<!> Failed to download image %d\n", i)
+		}
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("END")
+}
+
 func downloadImage(url string, destPath string) error {
 	// Create HTTP client with timeout
 	client := &http.Client{
@@ -99,7 +147,7 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 	var imageSources []string
 
 	// Parse the HTML content
-	for i := 0; i < len(htmlContent); i++ {
+	for i := range len(htmlContent) {
 		if strings.Contains(htmlContent[i], element) {
 			imageSources = append(imageSources, strings.Split(htmlContent[i], "\"")[1])
 		}
@@ -113,36 +161,4 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 func createOutputDir(path string) error {
 	err := os.Mkdir(path, os.ModePerm)
 	return err
-}
-
-func main() {
-	htmlFileName := "grow-wish"
-
-	err := createOutputDir(htmlFileName)
-	if err != nil {
-		fmt.Println("<!> Failed to make output directory")
-		os.Exit(1)
-	}
-
-	htmlLines, err := readFileLines(fmt.Sprintf("%s.html", htmlFileName))
-	if err != nil {
-		fmt.Println("<!> Failed to read lines")
-	}
-
-	imgURLs, err := getImageSources(htmlLines, "href=\"")
-	if err != nil {
-		fmt.Println("<!> Failed to get image sources")
-	}
-
-	for i := 1; i < len(imgURLs); i++ {
-		err := downloadImage(imgURLs[i], fmt.Sprintf("%s/%d.png", htmlFileName, i))
-		if err != nil {
-			fmt.Printf("<!> Failed to download image %d\n", i)
-		}
-	}
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Image downloaded successfully!")
 }
