@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -12,7 +11,13 @@ import (
 )
 
 func main() {
-	htmlFile := "lisa-growth-spell.html"
+	htmlFile := "succubus-milk.html"
+	downloadImagesFromHTML(htmlFile, "href=\"")
+
+	fmt.Println("END")
+}
+
+func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
 	_, ferr := os.Stat(htmlFile)
 	if ferr != nil {
 		if os.IsNotExist(ferr) {
@@ -23,16 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 	outputDir, _ := strings.CutSuffix(htmlFile, ".html")
-	_, derr := os.Stat(outputDir)
-	if os.IsNotExist(derr) {
-		err := createOutputDir(outputDir)
-		if err != nil {
-			fmt.Println("<!> Failed to make output directory")
-			os.Exit(1)
-		}
-	} else {
-		fmt.Printf("<#> Directory already exist: %s\n", htmlFile)
-	}
+	createOutputDir(outputDir)
 
 	htmlLines, err := readFileLines(htmlFile)
 	if err != nil {
@@ -40,23 +36,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	imgURLs, err := getImageSources(htmlLines, "href=\"")
+	imgURLs, err := getImageSources(htmlLines, htmlSourceTag)
 	if err != nil {
 		fmt.Println("<!> Failed to get image sources")
 		os.Exit(1)
 	}
 
 	for i := 1; i < len(imgURLs); i++ {
-		err := downloadImage(imgURLs[i], fmt.Sprintf("%s/%d.png", htmlFile, i))
+		err := downloadImage(imgURLs[i], fmt.Sprintf("%s/%d.png", outputDir, i))
 		if err != nil {
 			fmt.Printf("<!> Failed to download image %d\n", i)
 		}
 	}
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("END")
 }
 
 func downloadImage(url string, destPath string) error {
@@ -92,29 +83,6 @@ func downloadImage(url string, destPath string) error {
 	}
 
 	return nil
-}
-
-// GetHTML fetches and returns the HTML content of a webpage
-func getHTML(url string) (string, error) {
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	// Make HTTP GET request
-	resp, err := client.Get(url)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch page: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Read the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
-	}
-
-	return string(body), nil
 }
 
 func readFileLines(filename string) ([]string, error) {
@@ -158,7 +126,38 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 	return imageSources, nil
 }
 
-func createOutputDir(path string) error {
-	err := os.Mkdir(path, os.ModePerm)
-	return err
+func createOutputDir(path string) {
+	_, derr := os.Stat(path)
+	if os.IsNotExist(derr) {
+		err := os.Mkdir(path, os.ModePerm)
+		if err != nil {
+			fmt.Println("<!> Failed to make output directory")
+			os.Exit(1)
+		}
+	} else {
+		fmt.Printf("Directory already exist: %s\n", path)
+	}
 }
+
+// GetHTML fetches and returns the HTML content of a webpage
+// func getHTML(url string) (string, error) {
+// 	// Create HTTP client with timeout
+// 	client := &http.Client{
+// 		Timeout: 30 * time.Second,
+// 	}
+
+// 	// Make HTTP GET request
+// 	resp, err := client.Get(url)
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to fetch page: %v", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Read the response body
+// 	body, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to read response body: %v", err)
+// 	}
+
+// 	return string(body), nil
+// }
