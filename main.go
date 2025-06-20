@@ -154,26 +154,3 @@ func createOutputDir(outputDir string) {
 		}
 	}
 }
-
-// GetHTML fetches and returns the HTML content of a webpage
-// func getHTML(url string) (string, error) {
-// 	// Create HTTP client with timeout
-// 	client := &http.Client{
-// 		Timeout: 30 * time.Second,
-// 	}
-
-// 	// Make HTTP GET request
-// 	resp, err := client.Get(url)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to fetch page: %v", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	// Read the response body
-// 	body, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to read response body: %v", err)
-// 	}
-
-// 	return string(body), nil
-// }
