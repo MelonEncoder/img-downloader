@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	htmlFile := "growth-adventure.html"
-	downloadImagesFromHTML(htmlFile, "src=\"")
+	htmlFile := "grow-wish.html"
+	downloadImagesFromHTML(htmlFile, "href=\"")
 
 	fmt.Println("END")
 }
@@ -28,6 +28,7 @@ func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
 		os.Exit(1)
 	}
 	outputDir, _ := strings.CutSuffix(htmlFile, ".html")
+	outputDir = fmt.Sprintf("output/%s", outputDir)
 	createOutputDir(outputDir)
 
 	htmlLines, err := readFileLines(htmlFile)
@@ -43,15 +44,14 @@ func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
 	}
 
 	for i := 1; i < len(imgURLs); i++ {
-		fmt.Println(imgURLs[i])
-		err := downloadImage(imgURLs[i], fmt.Sprintf("%s/%d.png", outputDir, i))
+		err := downloadImage(imgURLs[i], outputDir, i)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 		}
 	}
 }
 
-func downloadImage(url string, destPath string) error {
+func downloadImage(url string, outputDir string, index int) error {
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -67,18 +67,22 @@ func downloadImage(url string, destPath string) error {
 	// Verify content type
 	contentType := resp.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "image/") {
-		return fmt.Errorf("<!> Not an image: %s", contentType)
+		return fmt.Errorf("<!> Response type not an image: %s \nIndex: %d, URL: %s", contentType, index, url)
 	}
 
+	// Create output path
+	fileExtension := url[strings.LastIndex(url, "."):]
+	outputPath := fmt.Sprintf("%s/%d%s", outputDir, index, fileExtension)
+
 	// Create destination file
-	f, err := os.Create(destPath)
+	fout, err := os.Create(outputPath)
 	if err != nil {
 		return fmt.Errorf("<!> Failed to create file: %v", err)
 	}
-	defer f.Close()
+	defer fout.Close()
 
 	// Copy the data
-	_, err = io.Copy(f, resp.Body)
+	_, err = io.Copy(fout, resp.Body)
 	if err != nil {
 		return fmt.Errorf("<!> Failed to save image: %v", err)
 	}
@@ -125,26 +129,20 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 	return imageSources, nil
 }
 
-func createOutputDir(path string) {
-	out := "output"
-	path = fmt.Sprintf("%s/%s", out, path)
-	_, terr := os.Stat(out)
-	if os.IsNotExist(terr) {
-		err := os.Mkdir(out, os.ModePerm)
-		if err != nil {
-			fmt.Println("<!> Failed to make output directory")
-			os.Exit(1)
+func createOutputDir(outputDir string) {
+	var finalOutputDir string = ""
+	for dir := range strings.SplitSeq(outputDir, "/") {
+		finalOutputDir += fmt.Sprintf("%s/", dir)
+		_, derr := os.Stat(finalOutputDir)
+		if os.IsNotExist(derr) {
+			err := os.Mkdir(finalOutputDir, os.ModePerm)
+			if err != nil {
+				fmt.Println("<!> Failed to make output directory")
+				os.Exit(1)
+			}
+		} else {
+			fmt.Printf("Directory already exist: %s\n", finalOutputDir)
 		}
-	}
-	_, derr := os.Stat(path)
-	if os.IsNotExist(derr) {
-		err := os.Mkdir(path, os.ModePerm)
-		if err != nil {
-			fmt.Println("<!> Failed to make output directory")
-			os.Exit(1)
-		}
-	} else {
-		fmt.Printf("Directory already exist: %s\n", path)
 	}
 }
 
