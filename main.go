@@ -80,7 +80,6 @@ func downloadImage(url string, outputDir string, index int) error {
 				break
 			}
 		}
-		fileExtension = ".png"
 	}
 	outputPath := fmt.Sprintf("%s/%d%s", outputDir, index, fileExtension)
 
