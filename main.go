@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	htmlFile := "ninja4.html"
+	htmlFile := "drink.html"
 	downloadImagesFromHTML(htmlFile, "src=\"")
 
 	fmt.Println("END")
@@ -72,7 +72,14 @@ func downloadImage(url string, outputDir string, index int) error {
 
 	// Create output path
 	fileExtension := url[strings.LastIndex(url, "."):]
+	imgExts := []string{".png", ".apng", ".jpg", ".jpeg", ".gif", ".webp", ".avif"}
 	if len(fileExtension) > 5 {
+		for _, ext := range imgExts {
+			if strings.Contains(url, ext) {
+				fileExtension = ext
+				break
+			}
+		}
 		fileExtension = ".png"
 	}
 	outputPath := fmt.Sprintf("%s/%d%s", outputDir, index, fileExtension)
