@@ -11,13 +11,55 @@ import (
 )
 
 func main() {
-	htmlFile := "drink.html"
-	downloadImagesFromHTML(htmlFile, "src=\"")
+	var htmlFile string
+	var urlTag string
+	var outputDir string
+
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run main.go -f <input.html> -t <urlTag> -o <outputDir>")
+		os.Exit(1)
+	}
+	for i := range os.Args {
+		if i == 0 {
+			i++
+		}
+		switch os.Args[i] {
+		case "-f":
+			i++
+			if i >= len(os.Args) {
+				fmt.Println("Error: No file specified after -f flag")
+				os.Exit(1)
+			}
+			htmlFile = os.Args[i]
+			if !strings.Contains(htmlFile, ".html") {
+				fmt.Printf("<!> Input file is not an .html file: %s\n", htmlFile)
+				os.Exit(1)
+			}
+		case "-t":
+			i++
+			if i >= len(os.Args) {
+				fmt.Println("<!> No URL tag specified after -t flag")
+				os.Exit(1)
+			}
+			urlTag = os.Args[i]
+		case "-o":
+			i++
+			if i >= len(os.Args) {
+				fmt.Println("<!> No output directory specified after -o flag")
+				os.Exit(1)
+			}
+			outputDir = os.Args[i]
+		}
+	}
+
+	fmt.Printf("File: %s\nTag: %s\nOutput: %s\n--------------\n", htmlFile, urlTag, outputDir)
+
+	downloadImagesFromHTML(htmlFile, urlTag, outputDir)
 
 	fmt.Println("END")
 }
 
-func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
+func downloadImagesFromHTML(htmlFile string, urlSourceTag string, outputDir string) {
 	_, ferr := os.Stat(htmlFile)
 	if ferr != nil {
 		if os.IsNotExist(ferr) {
@@ -27,8 +69,6 @@ func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
 		}
 		os.Exit(1)
 	}
-	outputDir, _ := strings.CutSuffix(htmlFile, ".html")
-	outputDir = fmt.Sprintf("output/%s", outputDir)
 	createOutputDir(outputDir)
 
 	htmlLines, err := readFileLines(htmlFile)
@@ -37,7 +77,7 @@ func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
 		os.Exit(1)
 	}
 
-	imgURLs, err := getImageSources(htmlLines, htmlSourceTag)
+	imgURLs, err := getImageSources(htmlLines, urlSourceTag)
 	if err != nil {
 		fmt.Println("<!> Failed to get image sources")
 		os.Exit(1)
