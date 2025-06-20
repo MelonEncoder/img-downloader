@@ -16,7 +16,7 @@ func main() {
 	var outputDir string
 
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run main.go -f <input.html> -t <urlTag> -o <outputDir>")
+		fmt.Println("Usage: imgdl -f <input.html> -t <urlTag> -o <outputDir>")
 		os.Exit(1)
 	}
 	for i := range os.Args {
@@ -180,17 +180,17 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 
 func createOutputDir(outputDir string) {
 	var finalOutputDir string = ""
-	for dir := range strings.SplitSeq(outputDir, "/") {
-		finalOutputDir += fmt.Sprintf("%s/", dir)
-		_, derr := os.Stat(finalOutputDir)
-		if os.IsNotExist(derr) {
+	_, err := os.Stat(outputDir)
+	if os.IsNotExist(err) {
+		for dir := range strings.SplitSeq(outputDir, "/") {
+			finalOutputDir += fmt.Sprintf("%s/", dir)
 			err := os.Mkdir(finalOutputDir, os.ModePerm)
 			if err != nil {
 				fmt.Println("<!> Failed to make output directory")
 				os.Exit(1)
 			}
-		} else {
-			fmt.Printf("Directory already exist: %s\n", finalOutputDir)
 		}
+	} else {
+		fmt.Printf("Directory already exist: %s\n", outputDir)
 	}
 }
