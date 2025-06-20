@@ -1,3 +1,5 @@
 *.html
-/test
+output
+output/*
 test/*
+test

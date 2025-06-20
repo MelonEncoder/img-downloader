@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	htmlFile := "succubus-milk.html"
-	downloadImagesFromHTML(htmlFile, "href=\"")
+	htmlFile := "growth-adventure.html"
+	downloadImagesFromHTML(htmlFile, "src=\"")
 
 	fmt.Println("END")
 }
@@ -43,9 +43,10 @@ func downloadImagesFromHTML(htmlFile string, htmlSourceTag string) {
 	}
 
 	for i := 1; i < len(imgURLs); i++ {
+		fmt.Println(imgURLs[i])
 		err := downloadImage(imgURLs[i], fmt.Sprintf("%s/%d.png", outputDir, i))
 		if err != nil {
-			fmt.Printf("<!> Failed to download image %d\n", i)
+			fmt.Printf("%v\n", err)
 		}
 	}
 }
@@ -59,27 +60,27 @@ func downloadImage(url string, destPath string) error {
 	// Download the image
 	resp, err := client.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to download image: %v", err)
+		return fmt.Errorf("<!> Failed to download content: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Verify content type
 	contentType := resp.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "image/") {
-		return fmt.Errorf("not an image: %s", contentType)
+		return fmt.Errorf("<!> Not an image: %s", contentType)
 	}
 
 	// Create destination file
 	f, err := os.Create(destPath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %v", err)
+		return fmt.Errorf("<!> Failed to create file: %v", err)
 	}
 	defer f.Close()
 
 	// Copy the data
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to save image: %v", err)
+		return fmt.Errorf("<!> Failed to save image: %v", err)
 	}
 
 	return nil
@@ -89,7 +90,7 @@ func readFileLines(filename string) ([]string, error) {
 	// Open the file
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %v", err)
+		return nil, fmt.Errorf("<!> Failed to open file: %v", err)
 	}
 	defer file.Close()
 
@@ -105,7 +106,7 @@ func readFileLines(filename string) ([]string, error) {
 
 	// Check for scanning errors
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to read file: %v", err)
+		return nil, fmt.Errorf("<!> Failed to read file: %v", err)
 	}
 
 	return lines, nil
@@ -121,12 +122,20 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 		}
 	}
 
-	// find the index of all <img> tags
-
 	return imageSources, nil
 }
 
 func createOutputDir(path string) {
+	out := "output"
+	path = fmt.Sprintf("%s/%s", out, path)
+	_, terr := os.Stat(out)
+	if os.IsNotExist(terr) {
+		err := os.Mkdir(out, os.ModePerm)
+		if err != nil {
+			fmt.Println("<!> Failed to make output directory")
+			os.Exit(1)
+		}
+	}
 	_, derr := os.Stat(path)
 	if os.IsNotExist(derr) {
 		err := os.Mkdir(path, os.ModePerm)
