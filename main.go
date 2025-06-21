@@ -59,7 +59,7 @@ func main() {
 	fmt.Println("END")
 }
 
-func downloadImagesFromHTML(htmlFile string, urlSourceTag string, outputDir string) {
+func downloadImagesFromHTML(htmlFile string, filterText string, outputDir string) {
 	_, ferr := os.Stat(htmlFile)
 	if ferr != nil {
 		if os.IsNotExist(ferr) {
@@ -71,13 +71,13 @@ func downloadImagesFromHTML(htmlFile string, urlSourceTag string, outputDir stri
 	}
 	createOutputDir(outputDir)
 
-	htmlLines, err := readFileLines(htmlFile)
+	htmlLines, err := readFileLines(htmlFile, filterText)
 	if err != nil {
 		fmt.Println("<!> Failed to read lines")
 		os.Exit(1)
 	}
 
-	imgURLs, err := getImageSources(htmlLines, urlSourceTag)
+	imgURLs, err := getImageSources(htmlLines)
 	if err != nil {
 		fmt.Println("<!> Failed to get image sources")
 		os.Exit(1)
@@ -139,7 +139,7 @@ func downloadImage(url string, outputDir string, index int) error {
 	return nil
 }
 
-func readFileLines(filename string) ([]string, error) {
+func readFileLines(filename string, filterText string) ([]string, error) {
 	// Open the file
 	file, err := os.Open(filename)
 	if err != nil {
@@ -154,7 +154,10 @@ func readFileLines(filename string) ([]string, error) {
 
 	// Read each line and append to slice
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+		line := scanner.Text()
+		if strings.Contains(line, filterText) {
+			lines = append(lines, line)
+		}
 	}
 
 	// Check for scanning errors
@@ -165,13 +168,18 @@ func readFileLines(filename string) ([]string, error) {
 	return lines, nil
 }
 
-func getImageSources(htmlContent []string, element string) ([]string, error) {
+func getImageSources(htmlContent []string) ([]string, error) {
 	var imageSources []string
 
 	// Parse the HTML content
 	for i := range len(htmlContent) {
-		if strings.Contains(htmlContent[i], element) {
-			imageSources = append(imageSources, strings.Split(htmlContent[i], "\"")[1])
+		for strs := range strings.SplitSeq(htmlContent[i], "\"") {
+			for str := range strings.SplitSeq(strs, " ") {
+				if strings.Contains(str, "https://") {
+					imageSources = append(imageSources, str)
+					break
+				}
+			}
 		}
 	}
 
@@ -179,16 +187,12 @@ func getImageSources(htmlContent []string, element string) ([]string, error) {
 }
 
 func createOutputDir(outputDir string) {
-	var finalOutputDir string = ""
-	_, err := os.Stat(outputDir)
-	if os.IsNotExist(err) {
-		for dir := range strings.SplitSeq(outputDir, "/") {
-			finalOutputDir += fmt.Sprintf("%s/", dir)
-			err := os.Mkdir(finalOutputDir, os.ModePerm)
-			if err != nil {
-				fmt.Println("<!> Failed to make output directory")
-				os.Exit(1)
-			}
+	_, derr := os.Stat(outputDir)
+	if os.IsNotExist(derr) {
+		err := os.Mkdir(outputDir, os.ModePerm)
+		if err != nil {
+			fmt.Println("<!> Failed to make output directory")
+			os.Exit(1)
 		}
 	} else {
 		fmt.Printf("Directory already exist: %s\n", outputDir)
