@@ -52,7 +52,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("File: %s\nText: \"%s\"\nOutput: %s\n--------------\n", htmlFile, filterText, outputDir)
+	fmt.Printf("File: %s\nText: \"%s\"\nOutput: %s\n\n", htmlFile, filterText, outputDir)
 
 	downloadImagesFromHTML(htmlFile, filterText, outputDir)
 
