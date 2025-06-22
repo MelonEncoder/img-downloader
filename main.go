@@ -12,11 +12,11 @@ import (
 
 func main() {
 	var htmlFile string
-	var urlTag string
+	var filterText string
 	var outputDir string
 
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: imgdl -f <input.html> -t <urlTag> -o <outputDir>")
+		fmt.Println("Usage: imgdl -f <input.html> -t <filterText> -o <outputDir>")
 		os.Exit(1)
 	}
 	for i := range os.Args {
@@ -41,7 +41,7 @@ func main() {
 				fmt.Println("<!> No URL tag specified after -t flag")
 				os.Exit(1)
 			}
-			urlTag = os.Args[i]
+			filterText = os.Args[i]
 		case "-o":
 			i++
 			if i >= len(os.Args) {
@@ -52,9 +52,9 @@ func main() {
 		}
 	}
 
-	fmt.Printf("File: %s\nTag: %s\nOutput: %s\n--------------\n", htmlFile, urlTag, outputDir)
+	fmt.Printf("File: %s\nText: \"%s\"\nOutput: %s\n--------------\n", htmlFile, filterText, outputDir)
 
-	downloadImagesFromHTML(htmlFile, urlTag, outputDir)
+	downloadImagesFromHTML(htmlFile, filterText, outputDir)
 
 	fmt.Println("END")
 }
