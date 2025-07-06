@@ -12,11 +12,11 @@ import (
 
 func main() {
 	var htmlFile string
-	var filterText string
+	var filterText string = "src="
 	var outputDir string
 
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: imgdl -f <input.html> -t <filterText> -o <outputDir>")
+		fmt.Println("Image Downloader (v0.1.1)\nUSAGE\n    imgdl [...flags]\nFLAGS\n    -f <input.html>\n    -t <filterText>\n    -o <outputDirectory>")
 		os.Exit(1)
 	}
 	for i := range os.Args {
@@ -27,29 +27,38 @@ func main() {
 		case "-f":
 			i++
 			if i >= len(os.Args) {
-				fmt.Println("Error: No file specified after -f flag")
+				fmt.Println("<!> Error: No file specified after -f flag")
 				os.Exit(1)
 			}
 			htmlFile = os.Args[i]
 			if !strings.Contains(htmlFile, ".html") {
-				fmt.Printf("<!> Input file is not an .html file: %s\n", htmlFile)
+				fmt.Printf("<!> Error: Not an .html file: %s\n", htmlFile)
 				os.Exit(1)
 			}
 		case "-t":
 			i++
 			if i >= len(os.Args) {
-				fmt.Println("<!> No URL tag specified after -t flag")
+				fmt.Println("<!> Error: filter text not specified after -t flag")
 				os.Exit(1)
 			}
 			filterText = os.Args[i]
 		case "-o":
 			i++
 			if i >= len(os.Args) {
-				fmt.Println("<!> No output directory specified after -o flag")
+				fmt.Println("<!> Error: No output directory specified after -o flag")
 				os.Exit(1)
 			}
 			outputDir = os.Args[i]
 		}
+	}
+
+	if len(htmlFile) == 0 {
+		fmt.Println("<!> Error: No html file specified.")
+		os.Exit(1)
+	}
+
+	if len(outputDir) == 0 {
+		outputDir = htmlFile[:strings.LastIndex(htmlFile, ".")]
 	}
 
 	fmt.Printf("File: %s\nText: \"%s\"\nOutput: %s\n\n", htmlFile, filterText, outputDir)
@@ -177,6 +186,10 @@ func getImageSources(htmlContent []string) ([]string, error) {
 			for str := range strings.SplitSeq(strs, " ") {
 				if strings.Contains(str, "https://") {
 					imageSources = append(imageSources, str)
+					break
+				} else if strings.Contains(str, "//") && strings.Index(str, "//") == 0 {
+					tmpStr := "http:" + str
+					imageSources = append(imageSources, tmpStr)
 					break
 				}
 			}
