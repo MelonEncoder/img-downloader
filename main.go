@@ -11,12 +11,21 @@ import (
 )
 
 func main() {
-	var htmlFile string
+	var htmlFile string = ""
 	var filterText string = "src="
-	var outputDir string
+	var outputDir string = ""
+	var urlPrefix string = ""
 
 	if len(os.Args) < 2 {
-		fmt.Println("Image Downloader (v0.1.1)\nUSAGE\n    imgdl [...flags]\nFLAGS\n    -f <input.html>\n    -t <filterText>\n    -o <outputDirectory>")
+		fmt.Println(
+			"Image Downloader (v0.1.1)\n",
+			"USAGE\n",
+			"    imgdl [...flags]\n",
+			"FLAGS\n",
+			"    -f <input.html>\n",
+			"    -t <filterText>\n",
+			"    -o <outputDirectory>\n",
+			"    -p <urlPrefix>")
 		os.Exit(1)
 	}
 	for i := range os.Args {
@@ -32,7 +41,7 @@ func main() {
 			}
 			htmlFile = os.Args[i]
 			if !strings.Contains(htmlFile, ".html") {
-				fmt.Printf("<!> Error: Not an .html file: %s\n", htmlFile)
+				fmt.Printf("<!> Error: %s is not a .html file.\n", htmlFile)
 				os.Exit(1)
 			}
 		case "-t":
@@ -49,6 +58,13 @@ func main() {
 				os.Exit(1)
 			}
 			outputDir = os.Args[i]
+		case "-p":
+			i++
+			if i >= len(os.Args) {
+				fmt.Println("<!> Error: No url prefix specified after -p flag")
+				os.Exit(1)
+			}
+			urlPrefix = os.Args[i]
 		}
 	}
 
@@ -61,34 +77,34 @@ func main() {
 		outputDir = htmlFile[:strings.LastIndex(htmlFile, ".")]
 	}
 
-	fmt.Printf("File: %s\nText: \"%s\"\nOutput: %s\n\n", htmlFile, filterText, outputDir)
+	fmt.Printf("File: %s\nText: \"%s\"\nOutput: %s\nURLPrefix: %s\n\n", htmlFile, filterText, outputDir, urlPrefix)
 
-	downloadImagesFromHTML(htmlFile, filterText, outputDir)
+	downloadImagesFromHTML(htmlFile, filterText, outputDir, urlPrefix)
 
 	fmt.Println("END")
 }
 
-func downloadImagesFromHTML(htmlFile string, filterText string, outputDir string) {
+func downloadImagesFromHTML(htmlFile string, filterText string, outputDir string, urlPrefix string) {
 	_, ferr := os.Stat(htmlFile)
 	if ferr != nil {
 		if os.IsNotExist(ferr) {
-			fmt.Printf("<!> File does not exist: %s\n", htmlFile)
+			fmt.Printf("<!> %s does not exist.\n", htmlFile)
 		} else {
-			fmt.Printf("<!> Failed to open html file: %s\n", htmlFile)
+			fmt.Printf("<!> Failed to open %s.\n", htmlFile)
 		}
 		os.Exit(1)
 	}
 	createOutputDir(outputDir)
 
-	htmlLines, err := readFileLines(htmlFile, filterText)
+	htmlLines, err := getHTMLLines(htmlFile)
 	if err != nil {
-		fmt.Println("<!> Failed to read lines")
+		fmt.Println("<!> Failed to read lines.")
 		os.Exit(1)
 	}
 
-	imgURLs, err := getImageSources(htmlLines)
+	imgURLs, err := getImageSources(htmlLines, filterText, urlPrefix)
 	if err != nil {
-		fmt.Println("<!> Failed to get image sources")
+		fmt.Println("<!> Failed to get image sources.")
 		os.Exit(1)
 	}
 
@@ -148,7 +164,7 @@ func downloadImage(url string, outputDir string, index int) error {
 	return nil
 }
 
-func readFileLines(filename string, filterText string) ([]string, error) {
+func getHTMLLines(filename string) ([]string, error) {
 	// Open the file
 	file, err := os.Open(filename)
 	if err != nil {
@@ -164,9 +180,7 @@ func readFileLines(filename string, filterText string) ([]string, error) {
 	// Read each line and append to slice
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, filterText) {
-			lines = append(lines, line)
-		}
+		lines = append(lines, line)
 	}
 
 	// Check for scanning errors
@@ -177,20 +191,55 @@ func readFileLines(filename string, filterText string) ([]string, error) {
 	return lines, nil
 }
 
-func getImageSources(htmlContent []string) ([]string, error) {
+func getImageSources(htmlContent []string, filterText string, urlPrefix string) ([]string, error) {
 	var imageSources []string
 
 	// Parse the HTML content
 	for i := range len(htmlContent) {
-		for strs := range strings.SplitSeq(htmlContent[i], "\"") {
-			for str := range strings.SplitSeq(strs, " ") {
-				if strings.Contains(str, "https://") {
-					imageSources = append(imageSources, str)
-					break
-				} else if strings.Contains(str, "//") && strings.Index(str, "//") == 0 {
-					tmpStr := "http:" + str
-					imageSources = append(imageSources, tmpStr)
-					break
+		line := htmlContent[i]
+		if strings.Contains(line, filterText) && strings.Contains(line, "/") {
+			for strs := range strings.SplitSeq(line, "\"") {
+				for str := range strings.SplitSeq(strs, " ") {
+					if strings.Contains(str, "https://") {
+						imageSources = append(imageSources, str)
+						break
+					} else if strings.Contains(str, "//") {
+						tmpStr := "http:" + str
+						imageSources = append(imageSources, tmpStr)
+						break
+					} else if strings.Contains(str, "/") {
+						tmpStr := urlPrefix + str
+						spaceIndex := strings.Index(str, "%20")
+						if spaceIndex != -1 {
+							s := strings.Split(tmpStr, "%20")
+							tmpStr = s[0] + " " + s[1]
+						}
+						imageSources = append(imageSources, tmpStr)
+						break
+					}
+				}
+			}
+		} else if strings.Contains(line, filterText) {
+			nextLine := htmlContent[i+1]
+			for strs := range strings.FieldsSeq(nextLine) {
+				for str := range strings.SplitSeq(strs, "\"") {
+					if strings.Contains(str, "https://") {
+						imageSources = append(imageSources, str)
+						break
+					} else if strings.Contains(str, "//") {
+						tmpStr := "http:" + str
+						imageSources = append(imageSources, tmpStr)
+						break
+					} else if strings.Contains(str, "/") {
+						tmpStr := urlPrefix + str
+						spaceIndex := strings.Index(str, "%20")
+						if spaceIndex != -1 {
+							s := strings.Split(tmpStr, "%20")
+							tmpStr = s[0] + " " + s[1]
+						}
+						imageSources = append(imageSources, tmpStr)
+						break
+					}
 				}
 			}
 		}
